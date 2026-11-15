@@ -10,6 +10,11 @@ This project adheres to `Semantic Versioning <https://semver.org/>`__.
 Changed
 ~~~~~~~
 
+- ``jwt.decode(..., subject=...)`` now raises ``MissingRequiredClaimError``
+  when the token has no ``sub`` claim, matching the existing behavior of the
+  ``issuer`` and ``audience`` binding checks. When ``subject`` is not given,
+  the optional ``sub`` claim continues to be allowed to be absent.
+
 - Add public ``jwt.decode`` regression coverage for AWS ALB-style padded
   ES256 tokens, including rejection of tampered payloads and signatures,
   in `#1211 <https://github.com/jpadilla/pyjwt/pull/1211>`__.

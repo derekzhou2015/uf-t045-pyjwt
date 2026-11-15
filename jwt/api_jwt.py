@@ -350,7 +350,11 @@ class PyJWT:
 
         :param audience: optional, the value for ``verify_aud`` check
         :type audience: str or typing.Iterable[str] or None
-        :param subject: optional, the value for ``verify_sub`` check
+        :param subject: optional, the value for ``verify_sub`` check.
+            When provided, the token must contain a matching ``sub`` claim;
+            a missing ``sub`` claim raises
+            :class:`jwt.MissingRequiredClaimError`. When ``None`` (the
+            default), the optional ``sub`` claim is not required.
         :type subject: str or None
         :param issuer: optional, the value for ``verify_iss`` check
         :type issuer: str or typing.Container[str] or None
@@ -436,22 +440,30 @@ class PyJWT:
         self, payload: dict[str, Any], subject: str | None = None
     ) -> None:
         """
-        Checks whether "sub" if in the payload is valid or not.
-        This is an Optional claim
+        Checks whether the "sub" claim is valid.
+
+        The "sub" claim is optional: when no expected ``subject`` is given,
+        a missing claim is allowed. When an expected ``subject`` is given,
+        the claim must be present and match, mirroring the ``iss`` and
+        ``aud`` binding checks.
 
         :param payload(dict): The payload which needs to be validated
-        :param subject(str): The subject of the token
+        :param subject(str): The expected subject of the token, or ``None``
+            to skip subject binding
         """
 
         if "sub" not in payload:
+            if subject is not None:
+                # Application specified a subject, but it could not be
+                # verified since the token does not contain the claim.
+                raise MissingRequiredClaimError("sub")
             return
 
         if not isinstance(payload["sub"], str):
             raise InvalidSubjectError("Subject must be a string")
 
-        if subject is not None:
-            if payload.get("sub") != subject:
-                raise InvalidSubjectError("Invalid subject")
+        if subject is not None and payload["sub"] != subject:
+            raise InvalidSubjectError("Invalid subject")
 
     def _validate_jti(self, payload: dict[str, Any]) -> None:
         """

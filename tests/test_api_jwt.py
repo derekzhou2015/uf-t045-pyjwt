@@ -1153,6 +1153,85 @@ class TestJWT:
         decoded = jwt.decode(token, secret, algorithms=["HS256"], subject=None)
         assert decoded["sub"] == "user789"
 
+    def test_decode_missing_sub_but_subject_expected(self, jwt: PyJWT) -> None:
+        """An explicit subject binding must reject tokens without a sub claim."""
+        secret = "your-256-bit-secret"
+        token = jwt.encode({}, secret, algorithm="HS256")
+
+        with pytest.raises(MissingRequiredClaimError) as exc_info:
+            jwt.decode(token, secret, algorithms=["HS256"], subject="user123")
+
+        assert exc_info.value.claim == "sub"
+        assert 'Token is missing the "sub" claim' == str(exc_info.value)
+
+    def test_decode_missing_sub_without_subject_still_passes(self, jwt: PyJWT) -> None:
+        """Without a subject binding, the optional sub claim stays optional."""
+        secret = "your-256-bit-secret"
+        token = jwt.encode({}, secret, algorithm="HS256")
+
+        decoded = jwt.decode(token, secret, algorithms=["HS256"])
+
+        assert "sub" not in decoded
+
+    def test_decode_explicit_subject_with_mismatched_sub_kept_invalid(
+        self, jwt: PyJWT
+    ) -> None:
+        """Invalid-value defense must not regress when subject binding is set."""
+        secret = "your-256-bit-secret"
+        token = jwt.encode({"sub": "user123"}, secret, algorithm="HS256")
+
+        with pytest.raises(InvalidSubjectError) as exc_info:
+            jwt.decode(token, secret, algorithms=["HS256"], subject="user456")
+
+        assert "Invalid subject" in str(exc_info.value)
+
+    def test_decode_missing_claims_with_all_three_bindings(self, jwt: PyJWT) -> None:
+        """iss/aud/sub bindings must each reject a token missing that claim."""
+        secret = "your-256-bit-secret"
+        token = jwt.encode({}, secret, algorithm="HS256")
+
+        with pytest.raises(MissingRequiredClaimError) as exc:
+            jwt.decode(
+                token,
+                secret,
+                algorithms=["HS256"],
+                issuer="urn:expected",
+            )
+        assert exc.value.claim == "iss"
+
+        with pytest.raises(MissingRequiredClaimError) as exc:
+            jwt.decode(
+                token,
+                secret,
+                algorithms=["HS256"],
+                audience="urn:expected",
+            )
+        assert exc.value.claim == "aud"
+
+        with pytest.raises(MissingRequiredClaimError) as exc:
+            jwt.decode(
+                token,
+                secret,
+                algorithms=["HS256"],
+                subject="user123",
+            )
+        assert exc.value.claim == "sub"
+
+    def test_decode_verify_sub_disabled_skips_subject_binding(self, jwt: PyJWT) -> None:
+        """verify_sub=False must keep the binding check opt-in."""
+        secret = "your-256-bit-secret"
+        token = jwt.encode({}, secret, algorithm="HS256")
+
+        decoded = jwt.decode(
+            token,
+            secret,
+            algorithms=["HS256"],
+            subject="user123",
+            options={"verify_sub": False},
+        )
+
+        assert "sub" not in decoded
+
     # -------------------- JTI Claim Tests --------------------
 
     def test_encode_decode_with_valid_jti_claim(self, jwt: PyJWT) -> None:

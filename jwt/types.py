@@ -48,7 +48,9 @@ class Options(TypedDict, total=False):
     verify_nbf: bool
     """Default: ``verify_signature``. Check that ``nbf`` (not before) claim value is in the past (if present in payload). """
     verify_sub: bool
-    """Default: ``verify_signature``. Check that ``sub`` (subject) claim is a string and matches ``subject`` (if present in payload). """
+    """Default: ``verify_signature``. Check that ``sub`` (subject) claim is a string and matches ``subject``.
+    When ``subject`` is provided, a missing ``sub`` claim raises ``MissingRequiredClaimError``;
+    when ``subject`` is not provided, the optional ``sub`` claim is not required. """
     enforce_minimum_key_length: bool
     """Default: ``False``. Raise :py:class:`jwt.exceptions.InvalidKeyError` instead of warning when keys are below minimum recommended length."""
 

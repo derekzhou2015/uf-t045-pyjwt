@@ -367,6 +367,25 @@ Subject Claim (sub)
     >>> decoded["sub"]
     '1234567890'
 
+To bind verification to a specific subject, pass the expected value with the
+``subject`` parameter. The token's ``sub`` claim must then be present and match
+exactly. If the claim is missing, `jwt.MissingRequiredClaimError` is raised —
+the same behavior as the ``issuer`` and ``audience`` binding checks:
+
+.. code-block:: pycon
+
+    >>> token_without_sub = jwt.encode({"some": "payload"}, "secret")
+    >>> try:
+    ...     jwt.decode(token_without_sub, "secret", subject="1234567890", algorithms=["HS256"])
+    ... except jwt.MissingRequiredClaimError as e:
+    ...     print(e)
+    ...
+    Token is missing the "sub" claim
+
+When no ``subject`` is passed, the ``sub`` claim stays optional: a token
+without it decodes as before, and an invalid (non-string) ``sub`` claim is
+still rejected with `jwt.InvalidSubjectError`.
+
 Think of the `sub` claim as the **"who"** of the JWT.
 It identifies the subject of the token — the user or entity that the token is about.
 The claims inside a JWT are essentially statements about this subject.
